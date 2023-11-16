@@ -107,6 +107,46 @@ ColorDistribution getColorDistribution(Mat input, Point pt1, Point pt2)
     return cd;
 }
 
+float minDistance(const ColorDistribution &h, const std::vector<ColorDistribution> &hists)
+{
+    float minDist = std::numeric_limits<float>::max();
+
+    for (const auto &hist : hists)
+    {
+        float dist = h.distance(hist);
+        minDist = std::min(minDist, dist);
+    }
+
+    return minDist;
+}
+
+Mat recoObject(Mat input, const std::vector<ColorDistribution> &col_hists, const std::vector<ColorDistribution> &col_hists_object, const std::vector<Vec3b> &colors, const int bloc)
+{
+    Mat reco = Mat::zeros(input.rows, input.cols, CV_8UC3);
+
+    for (int y = 0; y < input.rows; y += bloc)
+    {
+        for (int x = 0; x < input.cols; x += bloc)
+        {
+            Point pt1(x, y);
+            Point pt2(x + bloc, y + bloc);
+
+            ColorDistribution blockHist = getColorDistribution(input, pt1, pt2);
+
+            float distBackground = minDistance(blockHist, col_hists);
+            float distObject = minDistance(blockHist, col_hists_object);
+
+            // Choix de la couleur en fonction de la distance minimale
+            Vec3b color = (distBackground < distObject) ? colors[0] : colors[1];
+
+            // Coloration du bloc dans l'image reco
+            rectangle(reco, pt1, pt2, color, FILLED);
+        }
+    }
+
+    return reco;
+}
+
 int main(int argc, char **argv)
 {
     Mat img_input, img_seg, img_d_bgr, img_d_hsv, img_d_lab;
@@ -136,12 +176,22 @@ int main(int argc, char **argv)
     Point pt2_right(width, height);
 
     namedWindow("input", 1);
+    namedWindow("reco", 1);
     imshow("input", img_input);
 
-    Point pt1( width/2-size/2, height/2-size/2 );
-    Point pt2( width/2+size/2, height/2+size/2 );
+    Point pt1(width / 2 - size / 2, height / 2 - size / 2);
+    Point pt2(width / 2 + size / 2, height / 2 + size / 2);
 
     bool freeze = false;
+
+    std::vector<Vec3b> colors;
+    colors.push_back(Vec3b(0, 0, 0));   // Noir pour le fond
+    colors.push_back(Vec3b(0, 0, 255)); // Rouge pour l'objet
+    bool reco = false;                  // Indicateur du mode reconnaissance
+
+
+    std::vector<ColorDistribution> col_hists;
+    std::vector<ColorDistribution> col_hists_object;
 
     while (true)
     {
@@ -171,12 +221,10 @@ int main(int argc, char **argv)
             cout << "La distance est : " << distance << endl;
         }
 
-        
-        std::vector<ColorDistribution> col_hists;
-        std::vector<ColorDistribution> col_hists_object;
+
         if (c == 'b')
         {
-            col_hists.clear(); 
+            col_hists.clear();
 
             const int bbloc = 128;
             for (int y = 0; y <= height - bbloc; y += bbloc)
@@ -186,14 +234,13 @@ int main(int argc, char **argv)
                     Point pt1(x, y);
                     Point pt2(x + bbloc, y + bbloc);
                     ColorDistribution hist = getColorDistribution(img_input, pt1, pt2);
-                    col_hists.push_back(hist); 
+                    col_hists.push_back(hist);
                 }
             }
 
             int nb_hists_background = col_hists.size();
             cout << "Nombre d'histogrammes de fond : " << nb_hists_background << endl;
         }
-
 
         if (c == 'a')
         {
@@ -202,6 +249,30 @@ int main(int argc, char **argv)
             int nb_hists_object = col_hists_object.size();
             cout << "Nombre d'histogrammes d'objet : " << nb_hists_object << endl;
         }
+
+        
+
+        if (c == 'r')
+        {
+            reco = !reco;
+            cout << "Mode reconnaissance : " << (reco ? "Activé" : "Désactivé") << endl;
+        }
+
+        Mat output = img_input;
+        if (reco)
+        {
+            Mat gray;
+            cvtColor(img_input, gray, COLOR_BGR2GRAY);
+            Mat recoImg = recoObject(img_input, col_hists, col_hists_object, colors, 8);
+            cvtColor(gray, img_input, COLOR_GRAY2BGR);
+            output = 0.5 * recoImg + 0.5 * img_input; 
+        }
+        else
+        {
+            cv::rectangle(img_input, pt1, pt2, Scalar({255.0, 255.0, 255.0}), 1);
+        }
+
+        imshow( "reco", output );
 
 
         cv::rectangle(img_input, pt1_left, pt2_left, Scalar({255.0, 255.0, 255.0}), 1);
