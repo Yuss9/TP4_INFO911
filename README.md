@@ -6,6 +6,11 @@ Réalise par :
 * Huseyin YURTSEVEN
 * Rémi CHAVANCE 
 
+
+Concernant les TP: nous avons finis les TP 1, 2 et 4.
+Nous n'avons pas réussi a faire fonctionner le TP3.
+
+
  q : quitter l'application
  v : calculer la distance entre les deux parties de l'image
  b : apprendre background
@@ -13,7 +18,6 @@ Réalise par :
  r : switcher entre mode reco et mode normal
 
 
-Concernant les autres TP: nous avons finis les TP 1 et 2.
 
 
 
