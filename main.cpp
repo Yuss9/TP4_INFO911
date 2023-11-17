@@ -120,7 +120,7 @@ float minDistance(const ColorDistribution &h, const std::vector<ColorDistributio
     return minDist;
 }
 
-Mat recoObject(Mat input, const std::vector<ColorDistribution> &col_hists, const std::vector<ColorDistribution> &col_hists_object, const std::vector<Vec3b> &colors, const int bloc)
+Mat recoObject(Mat input, const vector<vector<ColorDistribution>> &all_col_hists, const vector<Vec3b> &colors, int bloc)
 {
     Mat reco = Mat::zeros(input.rows, input.cols, CV_8UC3);
 
@@ -133,19 +133,38 @@ Mat recoObject(Mat input, const std::vector<ColorDistribution> &col_hists, const
 
             ColorDistribution blockHist = getColorDistribution(input, pt1, pt2);
 
-            float distBackground = minDistance(blockHist, col_hists);
-            float distObject = minDistance(blockHist, col_hists_object);
+            float minDist = numeric_limits<float>::max();
+            int selectedObject = 0;
 
-            // Choix de la couleur en fonction de la distance minimale
-            Vec3b color = (distBackground < distObject) ? colors[0] : colors[1];
+            for (size_t i = 0; i < all_col_hists.size(); ++i)
+            {
+                float dist = minDistance(blockHist, all_col_hists[i]);
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    selectedObject = i;
+                }
+            }
 
-            // Coloration du bloc dans l'image reco
+            Vec3b color;
+            if (selectedObject == 0)
+            {
+                // Fond (gris)
+                color = Vec3b(128, 128, 128);
+            }
+            else
+            {
+                // Objets avec des couleurs différentes
+                color = colors[selectedObject - 1]; // -1 pour compenser l'indice 0 réservé au fond
+            }
+
             rectangle(reco, pt1, pt2, color, FILLED);
         }
     }
 
     return reco;
 }
+
 
 int main(int argc, char **argv)
 {
@@ -189,9 +208,13 @@ int main(int argc, char **argv)
     colors.push_back(Vec3b(0, 0, 255)); // Rouge pour l'objet
     bool reco = false;                  // Indicateur du mode reconnaissance
 
-
     std::vector<ColorDistribution> col_hists;
     std::vector<ColorDistribution> col_hists_object;
+
+
+    vector<vector<ColorDistribution>> all_col_hists;
+    vector<Vec3b> all_colors;
+
 
     while (true)
     {
@@ -221,7 +244,6 @@ int main(int argc, char **argv)
             cout << "La distance est : " << distance << endl;
         }
 
-
         if (c == 'b')
         {
             col_hists.clear();
@@ -244,13 +266,15 @@ int main(int argc, char **argv)
 
         if (c == 'a')
         {
+            int objectIndex = all_col_hists.size();
             ColorDistribution obj_hist = getColorDistribution(img_input, pt1, pt2);
             col_hists_object.push_back(obj_hist);
+            all_col_hists.push_back(col_hists_object);
+            all_colors.push_back(Vec3b(rand() % 256, rand() % 256, rand() % 256));
+
             int nb_hists_object = col_hists_object.size();
             cout << "Nombre d'histogrammes d'objet : " << nb_hists_object << endl;
         }
-
-        
 
         if (c == 'r')
         {
@@ -261,19 +285,15 @@ int main(int argc, char **argv)
         Mat output = img_input;
         if (reco)
         {
-            Mat gray;
-            cvtColor(img_input, gray, COLOR_BGR2GRAY);
-            Mat recoImg = recoObject(img_input, col_hists, col_hists_object, colors, 8);
-            cvtColor(gray, img_input, COLOR_GRAY2BGR);
-            output = 0.5 * recoImg + 0.5 * img_input; 
+            Mat recoImg = recoObject(img_input, all_col_hists, all_colors, 8);
+            output = 0.5 * recoImg + 0.5 * img_input;
         }
         else
         {
             cv::rectangle(img_input, pt1, pt2, Scalar({255.0, 255.0, 255.0}), 1);
         }
 
-        imshow( "reco", output );
-
+        imshow("reco", output);
 
         cv::rectangle(img_input, pt1_left, pt2_left, Scalar({255.0, 255.0, 255.0}), 1);
         cv::rectangle(img_input, pt1_right, pt2_right, Scalar({255.0, 255.0, 255.0}), 1);
