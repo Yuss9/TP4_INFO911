@@ -20,3 +20,8 @@ Concernant les autres TP: nous avons finis les TP 1 et 2.
 
 
 ![Dernière question](https://media.discordapp.net/attachments/1174359206380445806/1175018126488915988/Capture_decran_2023-11-17_a_11.21.16.png?ex=6569b3e8&is=65573ee8&hm=536456aa734d51340056bab9ec4671b9e425a88a689c4c7879163ff7d04e93a6&=&width=1568&height=1284)
+
+
+[Lien github tp1 : ](https://github.com/Yuss9/TP1_INFO911)
+[Lien github tp2 : ](https://github.com/Yuss9/TP2_INFO911)
+[Lien github tp4 : ](https://github.com/Yuss9/TP4_INFO911)
